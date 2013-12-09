@@ -7,50 +7,79 @@ import (
 	"io/ioutil"
 	"log"
 	"strconv"
+	"container/heap"
 )
 
 type DataCollector struct {
 	best    float64
-	current float64
 	window  []float64
-	winSize int
+	heap []int		// pretend heap of the values in the window
+	revheap []int		// we need to know which window position corresponds to which heap position for heap.Fix
 	samples int
 }
 
 func NewDC(wsz int) *DataCollector {
-	return &DataCollector{winSize: wsz, window: make([]float64, wsz)}
-}
-
-func (dc *DataCollector) rescan(first bool) {
-	min := dc.window[0]
-	for _, v := range dc.window {
-		if v < min {
-			min = v
-		}
+	dc := DataCollector{window: make([]float64, wsz), heap: make([]int, wsz), revheap: make([]int, wsz)}
+	for k, _ := range dc.heap {
+		dc.heap[k], dc.revheap[k] = k, k
 	}
-	dc.current = min
-	if min > dc.best || first {
-		dc.best = min
-	}
+	return &dc
 }
 
 func (dc *DataCollector) AddSample(s float64) {
-	replaced := dc.window[dc.samples%dc.winSize]
-	dc.window[dc.samples%dc.winSize] = s
+	pos := dc.samples % len(dc.window)
+	dc.window[pos] = s
 	dc.samples++
-	if dc.samples < dc.winSize {
+	if dc.samples < len(dc.window) {
 		return
 	}
-	if dc.samples == dc.winSize || replaced == dc.current || s < dc.current {
-		dc.rescan(dc.samples == dc.winSize)
+	if dc.samples == len(dc.window) {
+		heap.Init(dc)
+		dc.best = dc.window[dc.heap[0]]
+		return
+	}
+
+	heap.Fix(dc, dc.revheap[pos])
+	if dc.window[dc.heap[0]] > dc.best {
+		dc.best = dc.window[dc.heap[0]]
 	}
 }
 
 func (dc DataCollector) Result() float64 {
-	if dc.samples < dc.winSize {
+	if dc.samples < len(dc.window) {
 		log.Fatal("too few samples")
 	}
 	return dc.best
+}
+
+// Implements heap.Interface
+func (dc DataCollector) Len() int {
+	if dc.samples < len(dc.window) {
+		return dc.samples
+	}
+	return len(dc.window)
+}
+
+// Implements heap.Interface
+func (dc DataCollector) Less(i, j int) bool {
+	return dc.window[dc.heap[i]] < dc.window[dc.heap[j]]
+}
+
+// Implements heap.Interface
+func (dc DataCollector) Swap(i, j int) {
+	dc.heap[i], dc.heap[j] = dc.heap[j], dc.heap[i]
+	dc.revheap[dc.heap[i]], dc.revheap[dc.heap[j]] = i, j
+}
+
+// Implements heap.Interface
+func (dc DataCollector) Push(x interface{}) {
+	log.Fatal("we never push to the heap")
+}
+
+// Implements heap.Interface
+func (dc DataCollector) Pop() interface{} {
+	log.Fatal("we never pop from the heap")
+	return nil
 }
 
 func main() {
@@ -65,18 +94,18 @@ func main() {
 	}
 	j, err := ioutil.ReadFile("dump.json")
 	if err != nil {
-		log.Fatal("ReadFile(dump.json): %v\n", err)
+		log.Fatalf("ReadFile(dump.json): %v\n", err)
 	}
 	data := make([]map[string]interface{}, 0)
 	err = json.Unmarshal(j, &data)
 	if err != nil {
-		log.Fatal("json.Unmarshal: %v\n", err)
+		log.Fatalf("json.Unmarshal: %v\n", err)
 	}
 	dc := NewDC(nsamples)
 	for _, v := range data {
 		f, err := strconv.ParseFloat(v["value"].(string), 64)
 		if err != nil {
-			log.Fatal("parsing '%v' as float: %v", v["value"], err)
+			log.Fatalf("parsing '%v' as float: %v", v["value"], err)
 		}
 		dc.AddSample(f)
 	}
