@@ -1,20 +1,20 @@
 package main
 
 import (
+	"container/heap"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"strconv"
-	"container/heap"
 )
 
 type DataCollector struct {
 	best    float64
 	window  []float64
-	heap []int		// pretend heap of the values in the window
-	revheap []int		// we need to know which window position corresponds to which heap position for heap.Fix
+	heap    []int // pretend heap of the values in the window
+	revheap []int // we need to know which window position corresponds to which heap position for heap.Fix
 	samples int
 }
 
