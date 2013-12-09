@@ -70,12 +70,12 @@ func (dc DataCollector) Swap(i, j int) {
 
 // Implements heap.Interface
 func (dc DataCollector) Push(x interface{}) {
-	log.Fatal("we never push to the heap")
+	panic("we never push to the heap")
 }
 
 // Implements heap.Interface
 func (dc DataCollector) Pop() interface{} {
-	log.Fatal("we never pop from the heap")
+	panic("we never pop from the heap")
 	return nil
 }
 
