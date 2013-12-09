@@ -28,11 +28,9 @@ func (dc *DataCollector) rescan(first bool) {
 			min = v
 		}
 	}
-	if min < dc.current || first {
-		dc.current = min
-		if min > dc.best || first {
-			dc.best = min
-		}
+	dc.current = min
+	if min > dc.best || first {
+		dc.best = min
 	}
 }
 
@@ -43,7 +41,7 @@ func (dc *DataCollector) AddSample(s float64) {
 	if dc.samples < dc.winSize {
 		return
 	}
-	if dc.samples == dc.winSize || replaced == dc.current {
+	if dc.samples == dc.winSize || replaced == dc.current || s < dc.current {
 		dc.rescan(dc.samples == dc.winSize)
 	}
 }
