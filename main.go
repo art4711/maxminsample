@@ -54,9 +54,6 @@ func (dc DataCollector) Result() float64 {
 
 // Implements heap.Interface
 func (dc DataCollector) Len() int {
-	if dc.samples < len(dc.window) {
-		return dc.samples
-	}
 	return len(dc.window)
 }
 
